@@ -10,131 +10,160 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
         [v-cloak] { display: none; }
-        body { background: #0f172a; color: white; font-family: 'Inter', sans-serif; }
+        body { background: #020617; color: white; font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); }
+        .desc-box { background: linear-gradient(135deg, rgba(234, 179, 8, 0.1) 0%, rgba(0,0,0,0) 100%); border-left: 4px solid #eab308; }
         .custom-scroll::-webkit-scrollbar { width: 5px; }
-        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
+        .bar-transition { transition: width 1s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
     </style>
 </head>
 <body>
-    <div id="app" v-cloak class="min-h-screen flex flex-col">
+    <div id="app" v-cloak class="min-h-screen flex flex-col p-4 pb-12">
         
         <!-- LOGIN SCREEN -->
-        <div v-if="!myRoll" class="flex-1 flex items-center justify-center p-4">
+        <div v-if="!myRoll" class="flex-1 flex items-center justify-center">
             <div class="max-w-md w-full glass p-8 rounded-3xl text-center shadow-2xl border-t-4 border-yellow-500">
-                <h2 class="text-2xl font-bold mb-8 text-yellow-500 uppercase tracking-widest italic">ECE (SEC.F) Awards</h2>
+                <h2 class="text-3xl font-black mb-2 text-yellow-500 italic uppercase">ECE-C</h2>
+                <p class="text-xs font-bold opacity-50 tracking-widest mb-8">SIGNATURE DAY AWARDS</p>
+                
                 <div class="text-left mb-6">
-                    <label class="text-xs font-bold opacity-50 ml-1 italic underline">ENTER YOUR ROLL NUMBER</label>
+                    <label class="text-[10px] font-black opacity-50 ml-1 uppercase tracking-tighter italic">Enter Your Roll No</label>
                     <input type="number" v-model.number="loginInput" placeholder="Ex: 169" 
-                           class="w-full mt-1 p-4 bg-slate-900 rounded-2xl border border-slate-700 text-center text-2xl text-white outline-none focus:border-yellow-500 transition">
+                           class="w-full mt-1 p-4 bg-slate-900 rounded-2xl border border-slate-700 text-center text-2xl font-black outline-none focus:border-yellow-500 transition">
                 </div>
                 <button @click="login" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl hover:bg-yellow-400 transition transform active:scale-95">
                     START VOTING →
                 </button>
-                <p v-if="error" class="text-red-400 mt-4 text-sm font-bold">{{error}}</p>
+                <p v-if="error" class="text-red-400 mt-4 text-xs font-bold uppercase">{{error}}</p>
             </div>
         </div>
 
-        <!-- MAIN APP INTERFACE -->
-        <div v-else class="flex-1 flex flex-col lg:flex-row h-screen">
+        <!-- MAIN VOTING INTERFACE -->
+        <div v-else class="max-w-2xl mx-auto w-full">
             
-            <!-- LEFT SIDE: CLASS DIRECTORY (SCROLLABLE) -->
-            <div class="lg:w-1/3 w-full border-r border-white/5 bg-black/20 flex flex-col h-1/3 lg:h-full">
-                <div class="p-6 border-b border-white/5 bg-slate-900/50">
-                    <h3 class="text-yellow-500 font-black italic uppercase flex items-center gap-2">
-                        <span>👥 Class Directory</span>
-                        <span class="text-[10px] text-white/40 font-normal">({{students.length}} Students)</span>
-                    </h3>
-                    <input type="text" v-model="search" placeholder="Search name or roll..." 
-                           class="w-full mt-3 p-2 bg-slate-800 rounded-lg text-sm border border-white/10 outline-none focus:border-yellow-500">
-                </div>
-                <div class="flex-1 overflow-y-auto custom-scroll p-4 space-y-1">
-                    <div v-for="s in filteredStudents" 
-                         @click="voteInput = s.roll"
-                         class="flex justify-between items-center p-2 rounded-lg hover:bg-white/5 cursor-pointer group transition">
-                        <span class="text-xs text-white/40 font-mono">#{{s.roll}}</span>
-                        <span class="text-sm font-medium group-hover:text-yellow-400 uppercase text-right">{{s.name}}</span>
-                    </div>
-                </div>
+            <!-- HEADER -->
+            <div class="flex justify-between items-center mb-6 px-2">
+                <span class="glass px-4 py-2 rounded-full text-[10px] font-black text-yellow-500 uppercase tracking-widest">Logged: #{{myRoll}}</span>
+                <span class="text-[10px] font-black opacity-40 uppercase tracking-widest">Award {{currentIdx + 1}} / {{awards.length}}</span>
             </div>
 
-            <!-- RIGHT SIDE: VOTING AREA -->
-            <div v-if="!isFinished" class="lg:w-2/3 w-full flex flex-col overflow-y-auto p-4 lg:p-12 relative">
-                <div class="max-w-xl mx-auto w-full">
-                    <div class="flex justify-between items-end mb-8">
-                        <div>
-                            <p class="text-[10px] font-black opacity-30 tracking-widest uppercase">Category {{currentIdx + 1}}/{{awards.length}}</p>
-                            <h2 class="text-3xl font-black text-yellow-500 italic uppercase leading-tight">{{awards[currentIdx].title}}</h2>
-                        </div>
-                        <div class="text-right text-[10px] font-black opacity-30">VOTER: #{{myRoll}}</div>
-                    </div>
-
-                    <div class="glass rounded-[2rem] overflow-hidden shadow-2xl">
-                        <!-- Live Tally -->
-                        <div class="p-6 bg-black/40 border-b border-white/5">
-                            <p class="text-[10px] font-black opacity-40 uppercase tracking-widest mb-4">Current Leading:</p>
-                            <div class="flex flex-wrap gap-2">
-                                <div v-for="(count, roll) in getLiveResults(awards[currentIdx].id)" 
-                                     class="bg-white/5 px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
-                                    <span class="text-xs font-black">#{{roll}}</span>
-                                    <span class="text-[10px] bg-yellow-500 text-black px-1.5 rounded font-black">{{count}}</span>
-                                </div>
-                                <p v-if="Object.keys(getLiveResults(awards[currentIdx].id)).length === 0" class="text-xs opacity-20 italic">No votes cast yet.</p>
-                            </div>
-                        </div>
-
-                        <!-- Voting Input -->
-                        <div class="p-8">
-                            <div v-if="!hasVoted(awards[currentIdx].id)">
-                                <div class="flex flex-col sm:flex-row gap-3">
-                                    <input type="number" v-model.number="voteInput" placeholder="Roll Number" 
-                                           class="flex-1 p-5 bg-slate-950 border border-slate-800 rounded-2xl text-2xl font-black text-yellow-500 outline-none focus:ring-2 ring-yellow-500">
-                                    <button @click="submitVote" class="bg-white text-black px-12 font-black rounded-2xl hover:bg-yellow-500 transition shadow-xl uppercase">Vote</button>
-                                </div>
-                                <p class="text-[10px] mt-4 opacity-40 text-center uppercase tracking-widest">Tip: Click a name from the list on the left to auto-fill</p>
-                                <p v-if="voteError" class="text-red-400 mt-4 text-xs font-bold text-center italic">{{voteError}}</p>
-                            </div>
-                            <div v-else class="text-center py-4">
-                                <div class="inline-block bg-green-500/10 text-green-400 px-6 py-2 rounded-full border border-green-500/20 font-black italic">
-                                    ✅ VOTED FOR #{{getVotedRoll(awards[currentIdx].id)}}
-                                </div>
-                            </div>
+            <!-- AWARD CARD -->
+            <div v-if="!isFinished">
+                <div class="glass rounded-[2.5rem] overflow-hidden shadow-2xl mb-6">
+                    <!-- Title Area -->
+                    <div class="p-8 text-center bg-gradient-to-b from-white/5 to-transparent">
+                        <h2 class="text-3xl font-black uppercase italic text-white tracking-tight leading-none mb-4">{{awards[currentIdx].title}}</h2>
+                        
+                        <div class="desc-box p-4 rounded-xl text-left">
+                            <p class="text-sm font-medium text-slate-200 leading-relaxed italic">
+                                "{{awards[currentIdx].desc}}"
+                            </p>
                         </div>
                     </div>
 
-                    <!-- Navigation -->
-                    <div class="mt-8 flex justify-between px-2">
-                        <button @click="currentIdx--" :disabled="currentIdx === 0" class="text-xs font-black opacity-30 hover:opacity-100 disabled:invisible">← PREV</button>
-                        <button v-if="hasVoted(awards[currentIdx].id)" @click="nextAward" class="bg-yellow-500 text-black px-8 py-3 rounded-full text-xs font-black uppercase tracking-tighter">Next Category →</button>
-                        <button v-else @click="showAdmin = !showAdmin" class="text-xs font-black opacity-10 uppercase tracking-tighter">Organizer Panel</button>
+                    <!-- BAR GRAPH LIVE TRENDS -->
+                    <div class="px-8 py-6 bg-black/40 border-y border-white/5">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-[10px] font-black opacity-40 tracking-widest uppercase italic">Live Trends</h3>
+                            <span class="flex items-center gap-1.5 text-[10px] font-bold text-yellow-500">
+                                <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse"></span> {{ getTotalVotes(awards[currentIdx].id) }} VOTES CAST
+                            </span>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div v-for="(stat, index) in getAwardStats(awards[currentIdx].id)" :key="stat.roll" class="animate-fadeIn">
+                                <div class="flex justify-between items-end mb-1">
+                                    <span class="text-xs font-bold uppercase tracking-tighter">
+                                        #{{stat.roll}} <span class="opacity-40 ml-1 font-normal">{{ getName(stat.roll) }}</span>
+                                    </span>
+                                    <span class="text-xs font-black">{{stat.count}}</span>
+                                </div>
+                                <div class="w-full bg-white/5 h-2.5 rounded-full overflow-hidden border border-white/5">
+                                    <div :class="[getBarColor(index), 'h-full bar-transition rounded-full']" 
+                                         :style="{ width: stat.percentage + '%' }"></div>
+                                </div>
+                            </div>
+                            <p v-if="getAwardStats(awards[currentIdx].id).length === 0" class="text-center py-4 text-xs opacity-20 italic font-bold uppercase tracking-widest">
+                                Be the first to nominate someone!
+                            </p>
+                        </div>
                     </div>
+
+                    <!-- Input Section -->
+                    <div class="p-8">
+                        <div v-if="!hasVoted(awards[currentIdx].id)">
+                            <div class="flex gap-3">
+                                <input type="number" v-model.number="voteInput" placeholder="Enter Roll No" 
+                                       class="flex-1 p-5 bg-slate-950 border border-slate-800 rounded-2xl text-2xl font-black text-yellow-500 outline-none focus:ring-2 ring-yellow-500 transition">
+                                <button @click="submitVote" class="bg-white text-black px-8 font-black rounded-2xl hover:bg-yellow-500 transition active:scale-95">VOTE</button>
+                            </div>
+                            <p v-if="voteError" class="text-red-400 mt-3 text-xs font-bold text-center italic uppercase tracking-widest">{{voteError}}</p>
+                        </div>
+                        <div v-else class="text-center py-6 bg-green-500/10 rounded-2xl border border-green-500/20">
+                            <p class="text-green-400 font-black italic tracking-widest animate-bounce">✅ LOCKED FOR #{{getVotedRoll(awards[currentIdx].id)}}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DROPDOWN DIRECTORY -->
+                <div class="mb-8">
+                    <button @click="showDirectory = !showDirectory" 
+                            class="w-full glass py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex justify-center items-center gap-3 active:scale-95 transition">
+                        <span>{{ showDirectory ? 'Close Directory' : 'View Class Roll Numbers' }}</span>
+                        <span :class="{'rotate-180': showDirectory}" class="transition-transform">▼</span>
+                    </button>
+                    
+                    <div v-if="showDirectory" class="mt-4 glass rounded-3xl p-6 h-[400px] flex flex-col animate-fadeIn">
+                        <input type="text" v-model="search" placeholder="Search by name..." 
+                               class="w-full mb-4 p-3 bg-slate-900 rounded-xl border border-white/10 text-sm outline-none focus:border-yellow-500">
+                        <div class="flex-1 overflow-y-auto custom-scroll pr-2">
+                            <div v-for="s in filteredStudents" @click="selectRoll(s.roll)"
+                                 class="flex justify-between items-center p-3 border-b border-white/5 hover:bg-yellow-500/10 cursor-pointer rounded-lg transition">
+                                <span class="text-xs font-mono opacity-50">#{{s.roll}}</span>
+                                <span class="text-sm font-bold uppercase tracking-tight">{{s.name}}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NAVIGATION -->
+                <div class="flex justify-between items-center px-4">
+                    <button @click="currentIdx--" :disabled="currentIdx === 0" class="text-[10px] font-black opacity-30 disabled:invisible uppercase">← Prev</button>
+                    <button v-if="hasVoted(awards[currentIdx].id)" @click="nextAward" class="bg-yellow-500 text-black px-10 py-4 rounded-full font-black uppercase tracking-tighter shadow-lg shadow-yellow-500/20">Next →</button>
+                    <button v-else @click="showAdmin = !showAdmin" class="text-[10px] font-black opacity-10 uppercase">Admin</button>
                 </div>
             </div>
 
             <!-- FINISH SCREEN -->
-            <div v-else class="flex-1 flex items-center justify-center p-4">
-                <div class="max-w-md w-full glass p-10 rounded-[3rem] text-center">
-                    <h2 class="text-4xl font-black italic mb-4">DONE! 🎓</h2>
-                    <p class="opacity-50 text-sm mb-8 font-medium italic underline">You have successfully casted all 25 votes.</p>
-                    <button @click="showAdmin = true" class="w-full py-4 rounded-2xl bg-yellow-500 text-black font-black uppercase shadow-lg shadow-yellow-500/20">Check Final Live Standings</button>
-                </div>
+            <div v-else class="text-center glass p-12 rounded-[3rem] shadow-2xl border-b-4 border-yellow-500">
+                <div class="text-6xl mb-6 animate-bounce">🎓</div>
+                <h2 class="text-4xl font-black italic mb-4 uppercase text-yellow-500 leading-none">SIGNATURE<br>DAY DONE!</h2>
+                <p class="opacity-50 text-sm mb-10 italic mt-4 font-medium uppercase tracking-widest">See you at the results ceremony!</p>
+                <button @click="showAdmin = true" class="w-full py-5 rounded-3xl bg-white text-black font-black uppercase tracking-widest hover:bg-yellow-500 transition shadow-xl">Final Standings</button>
             </div>
         </div>
 
-        <!-- HIDDEN ADMIN DASHBOARD -->
-        <div v-if="showAdmin" class="fixed inset-0 bg-slate-950 z-[200] p-6 overflow-y-auto">
-            <div class="max-w-3xl mx-auto">
-                <div class="flex justify-between items-center mb-8">
-                    <h2 class="text-3xl font-black italic underline">LIVE RESULTS 👑</h2>
-                    <button @click="showAdmin = false" class="bg-red-500/20 text-red-500 px-6 py-2 rounded-full font-bold">CLOSE</button>
+        <!-- ADMIN PANEL -->
+        <div v-if="showAdmin" class="fixed inset-0 bg-slate-950 z-[200] p-6 overflow-y-auto custom-scroll">
+            <div class="max-w-2xl mx-auto">
+                <div class="flex justify-between items-center mb-10 sticky top-0 bg-slate-950/90 backdrop-blur-md py-4 z-10 border-b border-white/5">
+                    <h2 class="text-2xl font-black italic uppercase text-yellow-500 tracking-tighter">🏆 Class Results</h2>
+                    <button @click="showAdmin = false" class="bg-red-500/20 text-red-500 px-6 py-2 rounded-full font-black text-xs uppercase border border-red-500/20">EXIT</button>
                 </div>
-                <div v-for="award in awards" class="glass p-6 rounded-3xl mb-4">
-                    <h3 class="text-lg font-black text-yellow-500 italic mb-4">{{award.title}}</h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        <div v-for="(count, roll) in getLiveResults(award.id)" class="bg-black/30 p-2 rounded-xl flex justify-between border border-white/5">
-                            <span class="text-xs font-bold">{{getName(roll)}} (#{{roll}})</span>
-                            <span class="text-xs font-black text-yellow-500">{{count}}</span>
+                <div v-for="award in awards" class="glass p-6 rounded-[2rem] mb-6">
+                    <h3 class="text-sm font-black uppercase mb-6 text-white/90 border-b border-white/5 pb-2 italic">{{award.title}}</h3>
+                    <div class="space-y-4">
+                        <div v-for="(stat, index) in getAwardStats(award.id)" :key="stat.roll">
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="text-[10px] font-bold uppercase tracking-tighter opacity-70">#{{stat.roll}} ({{getName(stat.roll)}})</span>
+                                <span class="text-xs font-black">{{stat.count}}</span>
+                            </div>
+                            <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                                <div :class="[getBarColor(index), 'h-full rounded-full']" :style="{ width: stat.percentage + '%' }"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -143,8 +172,7 @@
     </div>
 
     <script>
-        // --- 1. FIREBASE URL ---
-        const DATABASE_URL = "Yhttps://awards-62471-default-rtdb.firebaseio.com/"; 
+        const DATABASE_URL = "https://awards-62471-default-rtdb.firebaseio.com/"; 
 
         const { createApp } = Vue;
 
@@ -160,7 +188,9 @@
                     search: '',
                     showAdmin: false,
                     isFinished: false,
+                    showDirectory: false,
                     allVotes: {},
+                    colors: ['bg-rose-500', 'bg-amber-500', 'bg-emerald-500', 'bg-sky-500', 'bg-indigo-500', 'bg-fuchsia-500', 'bg-orange-500'],
                     students: [
                         {roll: 127, name: "ABHIGNA GOGU"}, {roll: 128, name: "ABHIRAM REDDY KADARI"}, {roll: 129, name: "ABHISHEK REDDY DOMA"},
                         {roll: 130, name: "ABISHEK AEKU"}, {roll: 131, name: "ADARSH MANDULA"}, {roll: 132, name: "AJAY KUMAR EMMIDI"},
@@ -183,25 +213,30 @@
                         {roll: 181, name: "SUMAIYA BEGUM"}, {roll: 182, name: "SYED ABDUL MUSTAFFA"}, {roll: 183, name: "TEJASWI ARURI"},
                         {roll: 185, name: "VAMSHI KRISHNA CHILUKA"}, {roll: 186, name: "VIGNESHWAR REDDY CHINTAKI"},
                         {roll: 187, name: "VISHNU VARDHAN GUNDEBOINA"}, {roll: 188, name: "VYSHNAVI ADEPU"},
-                        // Laterals
                         {roll: 315, name: "B. HARISH KUMAR"}, {roll: 316, name: "D. VENU"}, {roll: 317, name: "T. ANIKETH KUMAR"},
                         {roll: 318, name: "D. MAITHRI"}, {roll: 319, name: "J. POOJITHA"}, {roll: 320, name: "N. VAISHANVI"},
                         {roll: 321, name: "P. VIJAY KUMAR"}
                     ],
                     awards: [
-                        { id: 'pithamahi', title: '👻 Proxy Pithamahi' }, { id: 'chai', title: '☕ Chai Baanisa' },
-                        { id: 'alludu', title: '📝 Assignment Alludu' }, { id: 'hero', title: '🦸 Project Hero' },
-                        { id: 'sleep', title: '😴 Sleeping Beauty' }, { id: 'legend', title: '🎓 Last Min Legend' },
-                        { id: 'social', title: '📱 Social Addict' }, { id: 'killer', title: '🤫 Silent Killer' },
-                        { id: 'google', title: '📍 The Map Navigator' }, { id: 'beggar', title: '🖋️ Pen Beggar' },
-                        { id: 'debater', title: '🗣️ The Debater' }, { id: 'math', title: '🧮 Human Calculator' },
-                        { id: 'ghost', title: '🌫️ The Ghost' }, { id: 'fashion', title: '👔 Fashion Icon' },
-                        { id: 'movie', title: '🍿 Cinema Pithamahi' }, { id: 'foodie', title: '🍔 Canteen King' },
-                        { id: 'record', title: '🖋️ Writing Machine' }, { id: 'comedian', title: '🤡 The Comedian' },
-                        { id: 'hotspot', title: '📶 Hotspot Hunter' }, { id: 'gossip', title: '👂 Gossip Admin' },
-                        { id: 'selfie', title: '📸 Selfie Expert' }, { id: 'bench', title: '🎒 Backbench Leader' },
-                        { id: 'sign', title: '✍️ Signature Expert' }, { id: 'vlogger', title: '🎥 The Vlogger' },
-                        { id: 'heart', title: '💖 Heart of the Class' }
+                        { id: 'undercover', title: '🥷 Undercover Topper', desc: 'Nenemi chadavaledu mawa" ani exam mundu buildup isthadu, kani results vachaaka 9 GPA tho top leputaadu. Donga na koduku/Topper in disguise.' },
+                        { id: 'proxy', title: '👻 Proxy Pithamaha', desc: 'Roll call lo 5 different voices mimic chese Brahmanandam. Attendance list lo proxies veyyadam lo eeyanadi VVR/Khaleja level talent.' },
+                        { id: 'silent', title: '🤫 Silent Sharmila', desc: 'Class lo peddaga evaritho matladadu, kani results lo racha leputhundi. Evari kanta padakunda pani kanicche "Silent killer" of the batch.' },
+                        { id: 'oorvasi', title: '🎭 Overthinking Oorvasi', desc: 'Naaku text chusi reply ivvaledu, na meeda kopam vachinda? ani oka chinna vishayaniki ratrantha mind lo big boss task aade type.' },
+                        { id: 'double', title: '🔞 Double meaning DON', desc: 'Sir cheppe prathi innocent topic ki mind lo A-certificate thoughts thechukuni, pakkanollani gilli mari navvinche legend.' },
+                        { id: 'corporate', title: '💼 Corporate Kurradu/Kurradi', desc: 'First year nunche in-shirt eskuni, TCS HR la feel aypothu "Let\'s connect on LinkedIn" ani thirige future CEO.' },
+                        { id: 'batsman', title: '🏏 One Night Batsman', desc: 'Exam ki just 8 hours mundu syllabus copy open chesi, night-out kotti paper iragotte T20 one-man army.' },
+                        { id: 'biceps', title: '💪 Biceps Babai', desc: 'Body penchali, gym ki povali, addam mundu flex cheyali... idhe vadi lokaam. Veedi raktham lo haemoglobin kanna protein powder eh ekkuva untundi.' },
+                        { id: 'mavayya', title: '🌸 Relangi Mavayya', desc: 'Enta thittina, lab external enta veskunna "Em parledu mawa, light theesko" ani navvuthu unde ultimate wholesome peacemaker.' },
+                        { id: 'bidda', title: '👶 Faculty Muddu Bidda', desc: 'Sir ki assignment gurtu chese legendary "first-bench" sishyudu. HODs pampinche prathi pani chese department alludu.' },
+                        { id: 'chill', title: '🧘 Chill Mama', desc: '5 backlogs unna, lab lo zero vachina, canteen lo relax ga kurchuni phone scroll cheskune modern Gautama Buddha.' },
+                        { id: 'pulihora', title: '🍋 Pulihora Raja', desc: 'Campus lo ammayilatho maatalu kalapadam lo Mahesh Babu level rizz. Pulihora kalapadam lo Ph.D chesina romantic hero.' },
+                        { id: 'selfie', title: '🤳 Selfie Sundari', desc: 'Class, lab, canteen... ekkada padithe akkada ring light on cheskuni pouting chese campus Instagram queen.' },
+                        { id: 'drama', title: '🎭 Drama Devatha', desc: 'Chinna vishayani kooda mega serial range lo drag chesi, overaction tho oscar kotte character.' },
+                        { id: 'radio', title: '📻 Muchatla Maharani', desc: 'FM radio ki brand ambassador. Class lo evari gossip kavalanna, evari breakup story kavalanna eeme daggara untundi.' },
+                        { id: 'dhora', title: '🙋 Doubt-ala Dhora', desc: 'Class aypoyi andaru bag sardhukune time lo, sir ki dandaalu petti mari panikimalina doubt adige mahanubhavudu.' },
+                        { id: 'chai', title: '☕ Chai Baanisa', desc: '10 mins break dorikina chaalu, tapri daggara vaalipothadu. Irani chai tagakapothe veedi brain panic cheyyadu.' },
+                        { id: 'ramanujan', title: '🔢 75% Srinivasa Ramanujan', desc: 'Inka enni classes bunk kottachu? ani exact 75.0% calculate chese master mind. Attendance calculations lo Aryabhatta.' },
+                        { id: 'maharshi', title: '📚 Material Maharshi', desc: 'Exam mundu roju class antha veedi meedhe dependent. PDFs, previous papers forward chese literal god of Xerox copies.' }
                     ]
                 }
             },
@@ -213,18 +248,49 @@
             },
             methods: {
                 getName(roll) {
-                    const student = this.students.find(x => x.roll == roll);
-                    return student ? student.name.split(' ')[0] : 'Unknown';
+                    const s = this.students.find(x => x.roll == roll);
+                    return s ? s.name.split(' ')[0] : 'Unknown';
                 },
                 login() {
                     if (this.students.find(x => x.roll == this.loginInput)) {
                         this.myRoll = this.loginInput;
                         localStorage.setItem('voter_roll', this.myRoll);
-                    } else { this.error = "Roll Number not found in ECE-C list!"; }
+                    } else { this.error = "Roll not found!"; }
+                },
+                selectRoll(roll) {
+                    this.voteInput = roll;
+                    this.showDirectory = false;
+                },
+                getTotalVotes(id) {
+                    let total = 0;
+                    Object.values(this.allVotes).forEach(v => { if (v[id]) total++; });
+                    return total;
+                },
+                getAwardStats(id) {
+                    const counts = {};
+                    let total = 0;
+                    Object.values(this.allVotes).forEach(v => { 
+                        if (v[id]) {
+                            counts[v[id]] = (counts[v[id]] || 0) + 1;
+                            total++;
+                        }
+                    });
+                    
+                    return Object.entries(counts)
+                        .map(([roll, count]) => ({
+                            roll,
+                            count,
+                            percentage: (count / total) * 100
+                        }))
+                        .sort((a, b) => b.count - a.count)
+                        .slice(0, 5); // Show top 5
+                },
+                getBarColor(index) {
+                    return this.colors[index % this.colors.length];
                 },
                 submitVote() {
                     if (!this.students.find(x => x.roll == this.voteInput)) {
-                        this.voteError = "Roll number not in class!"; return;
+                        this.voteError = "Invalid Roll Number!"; return;
                     }
                     if (window.db) {
                         window.db.ref('votes/' + this.myRoll + '/' + this.awards[this.currentIdx].id).set(this.voteInput);
@@ -233,13 +299,10 @@
                     this.voteInput = null; this.voteError = '';
                 },
                 nextAward() {
-                    if (this.currentIdx < this.awards.length - 1) { this.currentIdx++; }
-                    else { this.isFinished = true; }
-                },
-                getLiveResults(id) {
-                    const counts = {};
-                    Object.values(this.allVotes).forEach(v => { if (v[id]) counts[v[id]] = (counts[v[id]] || 0) + 1; });
-                    return counts;
+                    if (this.currentIdx < this.awards.length - 1) { 
+                        this.currentIdx++; 
+                        window.scrollTo(0,0);
+                    } else { this.isFinished = true; }
                 },
                 hasVoted(id) { return this.allVotes[this.myRoll] && this.allVotes[this.myRoll][id]; },
                 getVotedRoll(id) { return this.allVotes[this.myRoll][id]; }
