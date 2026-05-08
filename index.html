@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>ECE-C Awards 🎓</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -10,10 +10,18 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
         [v-cloak] { display: none; }
-        body { background: #020617; color: white; font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        /* Prevent horizontal scroll entirely */
+        html, body { 
+            background: #020617; 
+            color: white; 
+            font-family: 'Inter', sans-serif; 
+            overflow-x: hidden;
+            width: 100%;
+            position: relative;
+        }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); }
         .desc-box { background: linear-gradient(135deg, rgba(234, 179, 8, 0.1) 0%, rgba(0,0,0,0) 100%); border-left: 4px solid #eab308; }
-        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
         .bar-transition { transition: width 1s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -21,147 +29,146 @@
     </style>
 </head>
 <body>
-    <div id="app" v-cloak class="min-h-screen flex flex-col p-4 pb-12">
+    <div id="app" v-cloak class="min-h-screen flex flex-col p-3 sm:p-4 pb-12 w-full max-w-full overflow-x-hidden">
         
         <!-- LOGIN SCREEN -->
-        <div v-if="!myRoll" class="flex-1 flex items-center justify-center">
-            <div class="max-w-md w-full glass p-8 rounded-3xl text-center shadow-2xl border-t-4 border-yellow-500">
-                <h2 class="text-3xl font-black mb-2 text-yellow-500 italic uppercase">ECE-C</h2>
-                <p class="text-xs font-bold opacity-50 tracking-widest mb-8">SIGNATURE DAY AWARDS</p>
+        <div v-if="!myRoll" class="flex-1 flex items-center justify-center w-full px-2">
+            <div class="max-w-md w-full glass p-6 sm:p-8 rounded-3xl text-center shadow-2xl border-t-4 border-yellow-500">
+                <h2 class="text-2xl sm:text-3xl font-black mb-2 text-yellow-500 italic uppercase">ECE-C</h2>
+                <p class="text-[10px] font-black opacity-50 tracking-widest mb-8 uppercase">Signature Day Awards</p>
                 
                 <div class="text-left mb-6">
-                    <label class="text-[10px] font-black opacity-50 ml-1 uppercase tracking-tighter italic">Enter Your Roll No</label>
+                    <label class="text-[10px] font-black opacity-50 ml-1 uppercase tracking-tighter italic">Your Roll No</label>
                     <input type="number" v-model.number="loginInput" placeholder="Ex: 169" 
-                           class="w-full mt-1 p-4 bg-slate-900 rounded-2xl border border-slate-700 text-center text-2xl font-black outline-none focus:border-yellow-500 transition">
+                           class="w-full mt-1 p-4 bg-slate-900 rounded-2xl border border-slate-700 text-center text-xl font-black outline-none focus:border-yellow-500 transition text-white">
                 </div>
-                <button @click="login" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl hover:bg-yellow-400 transition transform active:scale-95">
+                <button @click="login" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl hover:bg-yellow-400 transition transform active:scale-95 shadow-lg">
                     START VOTING →
                 </button>
-                <p v-if="error" class="text-red-400 mt-4 text-xs font-bold uppercase">{{error}}</p>
+                <p v-if="error" class="text-red-400 mt-4 text-[10px] font-bold uppercase">{{error}}</p>
             </div>
         </div>
 
         <!-- MAIN VOTING INTERFACE -->
-        <div v-else class="max-w-2xl mx-auto w-full">
+        <div v-else class="w-full max-w-2xl mx-auto overflow-x-hidden">
             
             <!-- HEADER -->
-            <div class="flex justify-between items-center mb-6 px-2">
-                <span class="glass px-4 py-2 rounded-full text-[10px] font-black text-yellow-500 uppercase tracking-widest">Logged: #{{myRoll}}</span>
-                <span class="text-[10px] font-black opacity-40 uppercase tracking-widest">Award {{currentIdx + 1}} / {{awards.length}}</span>
+            <div class="flex justify-between items-center mb-6 px-1">
+                <span class="glass px-3 py-1.5 rounded-full text-[9px] font-black text-yellow-500 uppercase">#{{myRoll}}</span>
+                <span class="text-[9px] font-black opacity-40 uppercase">Award {{currentIdx + 1}} / {{awards.length}}</span>
             </div>
 
             <!-- AWARD CARD -->
-            <div v-if="!isFinished">
-                <div class="glass rounded-[2.5rem] overflow-hidden shadow-2xl mb-6">
+            <div v-if="!isFinished" class="w-full">
+                <div class="glass rounded-[2rem] overflow-hidden shadow-2xl mb-6 w-full">
                     <!-- Title Area -->
-                    <div class="p-8 text-center bg-gradient-to-b from-white/5 to-transparent">
-                        <h2 class="text-3xl font-black uppercase italic text-white tracking-tight leading-none mb-4">{{awards[currentIdx].title}}</h2>
+                    <div class="p-6 sm:p-8 text-center bg-gradient-to-b from-white/5 to-transparent">
+                        <h2 class="text-2xl sm:text-3xl font-black uppercase italic text-white tracking-tight leading-none mb-4 break-words">{{awards[currentIdx].title}}</h2>
                         
                         <div class="desc-box p-4 rounded-xl text-left">
-                            <p class="text-sm font-medium text-slate-200 leading-relaxed italic">
+                            <p class="text-xs sm:text-sm font-medium text-slate-200 leading-relaxed italic">
                                 "{{awards[currentIdx].desc}}"
                             </p>
                         </div>
                     </div>
 
                     <!-- BAR GRAPH LIVE TRENDS -->
-                    <div class="px-8 py-6 bg-black/40 border-y border-white/5">
+                    <div class="px-6 sm:px-8 py-6 bg-black/40 border-y border-white/5">
                         <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-[10px] font-black opacity-40 tracking-widest uppercase italic">Live Trends</h3>
-                            <span class="flex items-center gap-1.5 text-[10px] font-bold text-yellow-500">
-                                <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse"></span> {{ getTotalVotes(awards[currentIdx].id) }} VOTES CAST
+                            <h3 class="text-[9px] font-black opacity-40 tracking-widest uppercase italic">Live Trends</h3>
+                            <span class="flex items-center gap-1.5 text-[9px] font-bold text-yellow-500">
+                                <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse"></span> {{ getTotalVotes(awards[currentIdx].id) }} VOTES
                             </span>
                         </div>
                         
                         <div class="space-y-4">
                             <div v-for="(stat, index) in getAwardStats(awards[currentIdx].id)" :key="stat.roll" class="animate-fadeIn">
                                 <div class="flex justify-between items-end mb-1">
-                                    <span class="text-xs font-bold uppercase tracking-tighter">
-                                        #{{stat.roll}} <span class="opacity-40 ml-1 font-normal">{{ getName(stat.roll) }}</span>
+                                    <span class="text-[10px] font-bold uppercase tracking-tighter">
+                                        #{{stat.roll}} <span class="opacity-40 ml-1 font-normal hidden sm:inline">{{ getName(stat.roll) }}</span>
                                     </span>
-                                    <span class="text-xs font-black">{{stat.count}}</span>
+                                    <span class="text-[10px] font-black text-yellow-500">{{stat.count}}</span>
                                 </div>
-                                <div class="w-full bg-white/5 h-2.5 rounded-full overflow-hidden border border-white/5">
+                                <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden border border-white/5">
                                     <div :class="[getBarColor(index), 'h-full bar-transition rounded-full']" 
                                          :style="{ width: stat.percentage + '%' }"></div>
                                 </div>
                             </div>
-                            <p v-if="getAwardStats(awards[currentIdx].id).length === 0" class="text-center py-4 text-xs opacity-20 italic font-bold uppercase tracking-widest">
-                                Be the first to nominate someone!
-                            </p>
                         </div>
                     </div>
 
-                    <!-- Input Section -->
-                    <div class="p-8">
+                    <!-- Input Section (Fixed for Mobile) -->
+                    <div class="p-6 sm:p-8 bg-slate-900/20">
                         <div v-if="!hasVoted(awards[currentIdx].id)">
-                            <div class="flex gap-3">
-                                <input type="number" v-model.number="voteInput" placeholder="Enter Roll No" 
-                                       class="flex-1 p-5 bg-slate-950 border border-slate-800 rounded-2xl text-2xl font-black text-yellow-500 outline-none focus:ring-2 ring-yellow-500 transition">
-                                <button @click="submitVote" class="bg-white text-black px-8 font-black rounded-2xl hover:bg-yellow-500 transition active:scale-95">VOTE</button>
+                            <div class="flex flex-col gap-3">
+                                <input type="number" v-model.number="voteInput" placeholder="Enter Nominee Roll" 
+                                       class="w-full p-4 bg-slate-950 border border-slate-800 rounded-2xl text-xl font-black text-yellow-500 outline-none focus:ring-1 ring-yellow-500 transition text-center">
+                                <button @click="submitVote" class="w-full bg-white text-black py-4 font-black rounded-2xl hover:bg-yellow-500 transition active:scale-95 shadow-xl uppercase text-sm">
+                                    Cast Vote
+                                </button>
                             </div>
-                            <p v-if="voteError" class="text-red-400 mt-3 text-xs font-bold text-center italic uppercase tracking-widest">{{voteError}}</p>
+                            <p v-if="voteError" class="text-red-400 mt-3 text-[10px] font-bold text-center italic uppercase">{{voteError}}</p>
                         </div>
-                        <div v-else class="text-center py-6 bg-green-500/10 rounded-2xl border border-green-500/20">
-                            <p class="text-green-400 font-black italic tracking-widest animate-bounce">✅ LOCKED FOR #{{getVotedRoll(awards[currentIdx].id)}}</p>
+                        <div v-else class="text-center py-5 bg-green-500/10 rounded-2xl border border-green-500/20">
+                            <p class="text-green-400 font-black italic tracking-widest text-xs">✅ VOTED FOR #{{getVotedRoll(awards[currentIdx].id)}}</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- DROPDOWN DIRECTORY -->
-                <div class="mb-8">
+                <div class="mb-8 w-full">
                     <button @click="showDirectory = !showDirectory" 
-                            class="w-full glass py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex justify-center items-center gap-3 active:scale-95 transition">
+                            class="w-full glass py-4 rounded-2xl font-black text-[9px] uppercase tracking-[0.2em] flex justify-center items-center gap-3 active:scale-95 transition">
                         <span>{{ showDirectory ? 'Close Directory' : 'View Class Roll Numbers' }}</span>
                         <span :class="{'rotate-180': showDirectory}" class="transition-transform">▼</span>
                     </button>
                     
-                    <div v-if="showDirectory" class="mt-4 glass rounded-3xl p-6 h-[400px] flex flex-col animate-fadeIn">
-                        <input type="text" v-model="search" placeholder="Search by name..." 
-                               class="w-full mb-4 p-3 bg-slate-900 rounded-xl border border-white/10 text-sm outline-none focus:border-yellow-500">
-                        <div class="flex-1 overflow-y-auto custom-scroll pr-2">
+                    <div v-if="showDirectory" class="mt-4 glass rounded-3xl p-4 h-[350px] flex flex-col animate-fadeIn">
+                        <input type="text" v-model="search" placeholder="Search name..." 
+                               class="w-full mb-4 p-3 bg-slate-900 rounded-xl border border-white/10 text-xs outline-none focus:border-yellow-500 text-white">
+                        <div class="flex-1 overflow-y-auto custom-scroll pr-1">
                             <div v-for="s in filteredStudents" @click="selectRoll(s.roll)"
-                                 class="flex justify-between items-center p-3 border-b border-white/5 hover:bg-yellow-500/10 cursor-pointer rounded-lg transition">
-                                <span class="text-xs font-mono opacity-50">#{{s.roll}}</span>
-                                <span class="text-sm font-bold uppercase tracking-tight">{{s.name}}</span>
+                                 class="flex justify-between items-center p-3 border-b border-white/5 hover:bg-yellow-500/10 cursor-pointer transition">
+                                <span class="text-[10px] font-mono opacity-50">#{{s.roll}}</span>
+                                <span class="text-[11px] font-bold uppercase tracking-tight text-right">{{s.name}}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- NAVIGATION -->
-                <div class="flex justify-between items-center px-4">
-                    <button @click="currentIdx--" :disabled="currentIdx === 0" class="text-[10px] font-black opacity-30 disabled:invisible uppercase">← Prev</button>
-                    <button v-if="hasVoted(awards[currentIdx].id)" @click="nextAward" class="bg-yellow-500 text-black px-10 py-4 rounded-full font-black uppercase tracking-tighter shadow-lg shadow-yellow-500/20">Next →</button>
-                    <button v-else @click="showAdmin = !showAdmin" class="text-[10px] font-black opacity-10 uppercase">Admin</button>
+                <div class="flex justify-between items-center px-2">
+                    <button @click="currentIdx--" :disabled="currentIdx === 0" class="text-[10px] font-black opacity-30 disabled:invisible uppercase p-2">← Prev</button>
+                    <button v-if="hasVoted(awards[currentIdx].id)" @click="nextAward" class="bg-yellow-500 text-black px-8 py-3 rounded-full font-black uppercase text-[10px] shadow-lg">Next Category →</button>
+                    <button v-else @click="showAdmin = !showAdmin" class="text-[9px] font-black opacity-10 uppercase p-2">Admin</button>
                 </div>
             </div>
 
             <!-- FINISH SCREEN -->
-            <div v-else class="text-center glass p-12 rounded-[3rem] shadow-2xl border-b-4 border-yellow-500">
-                <div class="text-6xl mb-6 animate-bounce">🎓</div>
-                <h2 class="text-4xl font-black italic mb-4 uppercase text-yellow-500 leading-none">SIGNATURE<br>DAY DONE!</h2>
-                <p class="opacity-50 text-sm mb-10 italic mt-4 font-medium uppercase tracking-widest">See you at the results ceremony!</p>
-                <button @click="showAdmin = true" class="w-full py-5 rounded-3xl bg-white text-black font-black uppercase tracking-widest hover:bg-yellow-500 transition shadow-xl">Final Standings</button>
+            <div v-else class="text-center glass p-8 sm:p-12 rounded-[2.5rem] shadow-2xl border-b-4 border-yellow-500 mx-2">
+                <div class="text-5xl mb-6">🎓</div>
+                <h2 class="text-3xl font-black italic mb-4 uppercase text-yellow-500 leading-none">SIGNATURE<br>DAY DONE!</h2>
+                <p class="opacity-50 text-[10px] mb-8 italic uppercase tracking-widest">Nominations Locked</p>
+                <button @click="showAdmin = true" class="w-full py-4 rounded-2xl bg-white text-black font-black uppercase text-xs tracking-widest hover:bg-yellow-500 transition">Final Standings</button>
             </div>
         </div>
 
         <!-- ADMIN PANEL -->
-        <div v-if="showAdmin" class="fixed inset-0 bg-slate-950 z-[200] p-6 overflow-y-auto custom-scroll">
-            <div class="max-w-2xl mx-auto">
-                <div class="flex justify-between items-center mb-10 sticky top-0 bg-slate-950/90 backdrop-blur-md py-4 z-10 border-b border-white/5">
-                    <h2 class="text-2xl font-black italic uppercase text-yellow-500 tracking-tighter">🏆 Class Results</h2>
-                    <button @click="showAdmin = false" class="bg-red-500/20 text-red-500 px-6 py-2 rounded-full font-black text-xs uppercase border border-red-500/20">EXIT</button>
+        <div v-if="showAdmin" class="fixed inset-0 bg-slate-950 z-[200] p-4 overflow-y-auto custom-scroll">
+            <div class="max-w-xl mx-auto w-full">
+                <div class="flex justify-between items-center mb-8 sticky top-0 bg-slate-950/95 py-4 z-10 border-b border-white/5">
+                    <h2 class="text-xl font-black italic uppercase text-yellow-500">🏆 Results</h2>
+                    <button @click="showAdmin = false" class="bg-red-500/10 text-red-500 px-5 py-2 rounded-full font-black text-[10px] uppercase border border-red-500/20">EXIT</button>
                 </div>
-                <div v-for="award in awards" class="glass p-6 rounded-[2rem] mb-6">
-                    <h3 class="text-sm font-black uppercase mb-6 text-white/90 border-b border-white/5 pb-2 italic">{{award.title}}</h3>
-                    <div class="space-y-4">
+                <div v-for="award in awards" class="glass p-5 rounded-3xl mb-6 border-l-2 border-yellow-500">
+                    <h3 class="text-xs font-black uppercase mb-5 text-white/90 italic tracking-tighter">{{award.title}}</h3>
+                    <div class="space-y-3">
                         <div v-for="(stat, index) in getAwardStats(award.id)" :key="stat.roll">
                             <div class="flex justify-between items-end mb-1">
-                                <span class="text-[10px] font-bold uppercase tracking-tighter opacity-70">#{{stat.roll}} ({{getName(stat.roll)}})</span>
-                                <span class="text-xs font-black">{{stat.count}}</span>
+                                <span class="text-[9px] font-bold uppercase tracking-tighter opacity-60">#{{stat.roll}} ({{getName(stat.roll)}})</span>
+                                <span class="text-[9px] font-black text-yellow-500">{{stat.count}}</span>
                             </div>
-                            <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                            <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
                                 <div :class="[getBarColor(index), 'h-full rounded-full']" :style="{ width: stat.percentage + '%' }"></div>
                             </div>
                         </div>
@@ -255,7 +262,7 @@
                     if (this.students.find(x => x.roll == this.loginInput)) {
                         this.myRoll = this.loginInput;
                         localStorage.setItem('voter_roll', this.myRoll);
-                    } else { this.error = "Roll not found!"; }
+                    } else { this.error = "Roll No Invalid!"; }
                 },
                 selectRoll(roll) {
                     this.voteInput = roll;
@@ -283,14 +290,14 @@
                             percentage: (count / total) * 100
                         }))
                         .sort((a, b) => b.count - a.count)
-                        .slice(0, 5); // Show top 5
+                        .slice(0, 5);
                 },
                 getBarColor(index) {
                     return this.colors[index % this.colors.length];
                 },
                 submitVote() {
                     if (!this.students.find(x => x.roll == this.voteInput)) {
-                        this.voteError = "Invalid Roll Number!"; return;
+                        this.voteError = "Enter Valid Roll!"; return;
                     }
                     if (window.db) {
                         window.db.ref('votes/' + this.myRoll + '/' + this.awards[this.currentIdx].id).set(this.voteInput);
