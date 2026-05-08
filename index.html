@@ -62,7 +62,6 @@
                     <div class="p-6 sm:p-8 text-center bg-gradient-to-b from-white/5 to-transparent">
                         <h2 class="text-2xl sm:text-4xl font-black uppercase italic text-yellow-500 tracking-tight leading-none mb-6 break-words">{{award.title}}</h2>
                         
-                        <!-- INCREASED DESCRIPTION FONT -->
                         <div class="desc-box p-5 sm:p-6 rounded-xl text-left">
                             <p class="text-lg sm:text-xl font-semibold text-white leading-relaxed italic">
                                 "{{award.desc}}"
@@ -81,7 +80,6 @@
                         
                         <div class="space-y-5">
                             <div v-for="(stat, index) in getAwardStats(award.id)" :key="stat.roll" class="animate-fadeIn">
-                                <!-- INCREASED TRENDS FONT -->
                                 <div class="flex justify-between items-end mb-2">
                                     <span class="text-sm sm:text-lg font-bold uppercase tracking-tight">
                                         #{{stat.roll}} <span class="opacity-50 ml-1 font-medium">{{ getName(stat.roll) }}</span>
@@ -109,7 +107,8 @@
                                     Cast Vote for {{award.id.includes('devi') || award.id.includes('kurradi') || award.id.includes('sundari') ? 'Her' : 'Him'}}
                                 </button>
                             </div>
-                            <p v-if="voteErrors[award.id]" class="text-red-400 mt-3 text-[10px] font-bold text-center italic uppercase">{{voteErrors[award.id]}}</p>
+                            <!-- DUPLICATE VOTE ERROR MESSAGE -->
+                            <p v-if="voteErrors[award.id]" class="text-red-400 mt-3 text-xs font-bold text-center italic uppercase leading-tight bg-red-400/10 p-2 rounded-lg border border-red-400/20">{{voteErrors[award.id]}}</p>
                         </div>
                         <div v-else class="text-center py-5 bg-green-500/10 rounded-2xl border border-green-500/20">
                             <p class="text-green-400 font-black italic tracking-widest text-sm">✅ LOCKED FOR #{{getVotedRoll(award.id)}}</p>
@@ -130,9 +129,12 @@
                                class="w-full mb-4 p-4 bg-slate-900 rounded-xl border border-white/10 text-sm outline-none focus:border-yellow-500 text-white">
                         <div class="flex-1 overflow-y-auto custom-scroll pr-1">
                             <div v-for="s in filteredStudents" @click="selectRoll(s.roll)"
-                                 class="flex justify-between items-center p-4 border-b border-white/5 hover:bg-yellow-500/10 cursor-pointer transition">
-                                <span class="text-xs font-mono opacity-50">#{{s.roll}}</span>
-                                <span class="text-sm font-bold uppercase tracking-tight text-right">{{s.name}}</span>
+                                 :class="['flex justify-between items-center p-4 border-b border-white/5 hover:bg-yellow-500/10 transition cursor-pointer', isAlreadyNominated(s.roll) ? 'opacity-30 cursor-not-allowed' : '']">
+                                <span class="text-xs font-mono opacity-50" :class="{'line-through': isAlreadyNominated(s.roll)}">#{{s.roll}}</span>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold uppercase tracking-tight block" :class="{'line-through': isAlreadyNominated(s.roll)}">{{s.name}}</span>
+                                    <span v-if="isAlreadyNominated(s.roll)" class="text-[8px] text-yellow-500 font-black italic uppercase">Already Nominated by You</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -289,7 +291,14 @@
                         localStorage.setItem('voter_roll', this.myRoll);
                     } else { this.error = "Invalid Roll Number!"; }
                 },
+                isAlreadyNominated(roll) {
+                    // Check if this roll exists in any of the logged-in user's previous votes
+                    if (!this.allVotes[this.myRoll]) return false;
+                    return Object.values(this.allVotes[this.myRoll]).includes(roll);
+                },
                 selectRoll(roll) {
+                    if (this.isAlreadyNominated(roll)) return;
+                    
                     const currentGroup = this.awardGroups[this.currentIdx];
                     const firstUnvoted = currentGroup.items.find(item => !this.hasVoted(item.id));
                     if (firstUnvoted) { this.voteInputs[firstUnvoted.id] = roll; }
@@ -317,10 +326,20 @@
                 getBarColor(index) { return this.colors[index % this.colors.length]; },
                 submitVote(awardId) {
                     const inputRoll = this.voteInputs[awardId];
+                    
+                    // 1. Check if roll exists
                     if (!this.students.find(x => x.roll == inputRoll)) {
                         this.voteErrors[awardId] = "Roll not found!"; 
                         return;
                     }
+
+                    // 2. IMPORTANT: CHECK FOR DUPLICATE NOMINATION BY THIS USER
+                    if (this.isAlreadyNominated(inputRoll)) {
+                        this.voteErrors[awardId] = "You've already nominated #" + inputRoll + " for another award!";
+                        return;
+                    }
+
+                    // 3. Success
                     if (window.db) { window.db.ref('votes/' + this.myRoll + '/' + awardId).set(inputRoll); }
                     delete this.voteErrors[awardId];
                 },
